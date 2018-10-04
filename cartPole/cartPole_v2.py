@@ -2,6 +2,8 @@
 import numpy as np
 import gym
 
+np.random.seed(43)
+
 #make environment
 env = gym.make('CartPole-v0')
 env.reset()
@@ -14,10 +16,12 @@ def train_strategy(env):
     w_flag = False
     for _ in range(num_episodes):
         obs = env.reset()
+        curr_weight = np.random.rand(4)
+
         if w_flag == True:
             opt_weight = 0.1*opt_weight + 0.9*curr_weight
 
-        curr_weight = np.random.rand(4)
+        
         gameOn = True
         step = 0
         while gameOn:
