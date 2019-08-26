@@ -10,7 +10,8 @@ if __name__ == "__main__":
     env = gym.make('LunarLander-v2')
 
     score_history = []
-    n_episodes = 2000
+    mean_score = []
+    n_episodes = 5000
 
     for i in range(n_episodes):
         done = False
@@ -26,13 +27,17 @@ if __name__ == "__main__":
             score += reward
 
         score_history.append(score)
+        mean_score.append(np.mean(score_history[-100:]))
 
+        # make agent train on episodic data 
         agent.learn()
 
-        print("Episode : ",i+1, " Score : ",score, " Mean Score : ", np.mean(score_history[-100:]))
+        if (i+1)%50==0:
+            print("Episode : ",i+1, " Score : ",score, " Mean Score : ", np.mean(score_history[-100:]))
 
-    fileanme = 'lander.png'
-
+    plt.plot(score_history)
+    plt.plot(mean_score)
+    plt.show()
 
 
 

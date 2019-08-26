@@ -3,29 +3,37 @@ Applications of Reinforcement Learning
 
 ## Index
 
-###1. CartPole Solution:
+### 1. CartPole Solution:
   a. Random Search for optimal weights
 
-###2. Game of Pong Solutions:
+### 2. Game of Pong Solutions:
   a. Computer play via tracking pong ball
 
-###3. NeonRace:
+### 3. NeonRace:
 
-###4. FrozenLake:
+### 4. FrozenLake:
   a. Q-table solution
   b. Q-network solution with tensorflow
 
-###5. Lunar Lander
-  Installation of Lunar Lander:
+### 5. Lunar Lander
+  Installation of Lunar Lander Environment:
 
   <b>i. Install swig:</b>
   brew install swig
 
-  <b>ii. Resolve GCC error:</b>
+  [in centos]
+  sudo yum install swig
+  
+
+  <b>ii. Resolve GCC error in MacOS:</b>
   sudo installer -pkg /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg -target /
 
+  [in centos]
+  sudo yum install gcc-c++
+
   <b>iii. Install box2d:</b>
-  pip install box2d box2d-kengz
+  [in centos]
+  pip install gym[box2d]
 
 
 
