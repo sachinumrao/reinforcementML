@@ -5,9 +5,10 @@ Applications of Reinforcement Learning
 
 ### 1. CartPole Solution:
   a. Random Search for optimal weights
+  b. Policy Gradeint 
 
 ### 2. Game of Pong Solutions:
-  a. Computer play via tracking pong ball
+  a. Computer plays via tracking pong ball
 
 ### 3. NeonRace:
 
@@ -34,6 +35,12 @@ Applications of Reinforcement Learning
   <b>iii. Install box2d:</b>
   [in centos]
   pip install gym[box2d]
+
+  Algorithms
+  a. Policy Gradient (keras)
+  b. Policy Gradient (pytorch)
+  c. Actor Critic
+  d. DQN
 
 
 
