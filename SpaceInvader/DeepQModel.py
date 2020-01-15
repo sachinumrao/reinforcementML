@@ -81,7 +81,8 @@ class Agent(object):
 
     def choose_action(self, obs):
         rand = np.random.random()
-        actions = self.Q_eval.forward(obs)
+        with T.no_grad():
+            actions = self.Q_eval.forward(obs)
 
         if rand < 1 - self.eps:
             action = T.argmax(actions[1]).item()
@@ -100,30 +101,40 @@ class Agent(object):
             self.learn_step_counter % self.replace_target_count == 0:
             self.Q_next.load_state_dict(self.Q_eval.state_dict())
 
-        # Select data from memory 
-        if self.mem_counter + batch_size < self.mem_size:
-            mem_start = int(np.random.choice(range(self.mem_counter)))
-        else:
-            mem_start = int(np.random.choice(range(self.mem_counter - \
-                batch_size - 1)))
+        # Iterate over to find mini_batch data
+        for i in range(0, self.mem_counter - batch_size,):
+            mini_batch = self.memory[i:i+batch_size]
 
-        mini_batch = self.memory[mem_start:mem_start+batch_size]
-        memory = np.array(mini_batch)
-
+        
         # Q-Learning algorithm
-        q_pred = self.Q_eval.forward(
-            list(memory[:,0][:])).to(self.Q_eval.device)
+    
+        # Extract input data "state" and "state_" from mini batch data 
+        inp_data = [i[0] for i in mini_batch]
+        next_inp_data = [i[3] for i in mini_batch]
 
-        q_next = self.Q_next.forward(
-            list(memory[:,3][:])).to(self.Q_eval.device)
+        # Convert state and state_ to torch tensors
+        inp_data = T.from_numpy(np.array(inp_data)).float()
+        next_inp_data = T.from_numpy(np.array(next_inp_data)).float()
+        
+        # Pass find q-values for state and state_
+        q_pred = self.Q_eval.forward(inp_data).to(self.Q_eval.device)
+        q_next = self.Q_next.forward(next_inp_data).to(self.Q_eval.device)
 
+        # print("next input data shape: ", next_inp_data.shape)
+        # print("next output data shape", q_next.shape)
+        
+        # Select the max action
         max_action = T.argmax(q_next, dim=1).to(self.Q_eval.device)
-        reward = T.Tensor(list(memory[:, 2])).to(self.Q_eval.device)
 
+        # Extract reward from batch_data and convert to torch tensor
+        reward = [i[2] for i in mini_batch]
+        reward = T.Tensor(reward).to(self.Q_eval.device)
+        
         q_target = q_pred
-        # print(q_pred.shape)
-        # print(q_next.shape)
-        q_target[:, max_action] = reward + self.gamma * T.max(q_next[1][:])
+    
+        #print(q_pred.shape)
+        #print(q_next.shape)
+        q_target[:, max_action] = reward + self.gamma * T.max(q_next[1])
 
         # Reduce eps (exploration factor)
         if self.steps > 500:
@@ -137,5 +148,3 @@ class Agent(object):
         loss.backward()
         self.Q_eval.optimizer.step()
         self.learn_step_counter += 1
-
-        

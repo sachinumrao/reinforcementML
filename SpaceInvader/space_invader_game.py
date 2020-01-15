@@ -1,8 +1,8 @@
 import gym
+import time
 from DeepQModel import DeepQModel, Agent
 import numpy as np
 import matplotlib.pyplot as plt
-
 
 print("Starting the simulation...")
 env = gym.make("SpaceInvaders-v0")
@@ -14,68 +14,63 @@ agent = Agent(gamma=0.99,
 
 print("Environment is built...")
 
-while agent.mem_counter < agent.mem_size:
+batch_size = 128
+score_history = []
+num_games = 100
+
+for i in range(num_games):
+    score = 0
+    agent.mem_counter = 0
+    agent.memory = []
+    frames = []
+
     obs = env.reset()
     done = False
-    while not done:
-        action = env.action_space.sample()
-        obs_, reward, done, info = env.step(action)
-        if done and info['ale.lives'] == 0:
-            reward = -100
 
+    # Play with current policy and store data
+    print("\nGame: ", i+1, " Data Collection Process Begins...")
+    t1 = time.time()
+    while not done:
+        if agent.mem_counter % 100 == 0:
+            print("Memory Counter: ", agent.mem_counter)
+
+        if agent.mem_counter < 3:
+            action = np.random.choice(agent.action_space)
+        else:
+            action = agent.choose_action(frames) 
+            frames.pop(0)
+
+        frames.append(np.mean(obs[15:200, 30:125], axis=2))
+        obs_, reward, done, info = env.step(action)
+        score += reward
+
+        # Extra penalty for dying
+        if done and info['ale.lives'] == 0:
+                reward = -100
+
+        # Store data into agent's memory
         agent.store_transition(np.mean(obs[15:200, 30:125], axis=2),
-            action, reward, np.mean(obs_[15:200, 30:125], axis=2))
+                                    action,
+                                    reward,
+                                    np.mean(obs_[15:200, 30:125], axis=2))
 
         obs = obs_
 
-    print("Memory Initialized...")
-
-    score_history = []
-    eps_history = []
-    num_games = 10
-    batch_size = 32
-
-    for i in range(num_games):
-        print('Starting Game: ', i+1, ' Epsilon: %.4f' % agent.eps)
-        eps_history.append(agent.eps)
-        done = False
-        obs = env.reset()
-        frames = [np.sum(obs[15:200, 30:125], axis=2)]
-        score = 0
-        last_action = 0
-
-        while not done:
-            if len(frames) == 3:
-                action = agent.choose_action(frames)
-                frames = []
-            else:
-                action = last_action
-
-            obs_, reward, done, info = env.step(action)
-            score += reward
-            frames.append(np.sum(obs[15:200, 30:125], axis=2))
-
-            if done and info['ale.lives'] == 0:
-                reward = -100
-
-            agent.store_transition(np.mean(obs[15:200, 30:125], axis=2),
-                                    action,
-                                    reward,
-                                    np.mean(obs_[15:200, 30:125], axis=2)) 
-            obs  = obs_
-            agent.learn(batch_size)
-            last_action = action
-
-        score_history.append(score)
-        print("Score: ", score)
-
-    x = [i+1 for i in range(num_games)]
+    t2 = time.time()
+    print("Data Collection Process Completed...")
+    print("Time Taken in Data Collection: ", t2-t1)
     
-    plt.plot(score_history)
-    plt.show()
+    print("Game: ", i+1, " Game Length: ", agent.mem_counter)
+    
+    # Make agent learn from stored data
+    t3 = time.time()
+    agent.learn(batch_size)
+    t4 = time.time()
+    print("Time Taken in Learning: ", t4-t3)
+    print("Score: ", score)
 
-            
+    # Save score
+    score_history.append(score)
 
-
-
-
+plt.plot(score_history)
+plt.show()
