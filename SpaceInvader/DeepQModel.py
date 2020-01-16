@@ -12,13 +12,15 @@ class DeepQModel(nn.Module):
         super(DeepQModel, self).__init__()
 
         # Convolutional layers for model
-        self.conv1 = nn.Conv2d(1, 32, 8, stride=4, padding=1)
+        self.conv1 = nn.Conv2d(3, 32, 8, stride=4, padding=1)
         self.conv2 = nn.Conv2d(32, 64, 4, stride=2)
         self.conv3 = nn.Conv2d(64, 128, 3)
 
         # Fully connected layers for model
         self.fc1 = nn.Linear(128*19*8, 512)
-        self.fc2 = nn.Linear(512, 6)
+        self.fc2 = nn.Linear(512, 128)
+        self.fc3 = nn.Linear(128, 32)
+        self.fc4 = nn.Linear(32, 6)
 
         # Define optimizer and loss
         self.optimizer = optim.Adam(self.parameters(), lr=alpha)
@@ -34,7 +36,7 @@ class DeepQModel(nn.Module):
         obs = T.Tensor(obs).to(self.device)
 
         # Reshape image
-        obs = obs.view(-1, 1, 185, 95)
+        obs = obs.view(-1, 3, 185, 95)
 
         # Pass observation through convolutional layers
         out = F.relu(self.conv1(obs))
@@ -47,7 +49,9 @@ class DeepQModel(nn.Module):
 
         # Pass through fully connected layers
         out = F.relu(self.fc1(out))
-        actions = self.fc2(out)
+        out = F.relu(self.fc2(out))
+        out = F.relu(self.fc3(out))
+        actions = self.fc4(out)
 
         return actions
 

@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 print("Starting the simulation...")
 env = gym.make("SpaceInvaders-v0")
 agent = Agent(gamma=0.99, 
-                eps=0.99,
-                alpha=0.01,
+                eps=0.20,
+                alpha=0.02,
                 max_mem=5000,
                 replace=None)
 
@@ -40,7 +40,9 @@ for i in range(num_games):
             action = agent.choose_action(frames) 
             frames.pop(0)
 
-        frames.append(np.mean(obs[15:200, 30:125], axis=2))
+        # For training forblack and white use below line
+        #frames.append(np.mean(obs[15:200, 30:125], axis=2))
+        frames.append(obs[15:200, 30:125])
         obs_, reward, done, info = env.step(action)
         score += reward
 
@@ -49,10 +51,10 @@ for i in range(num_games):
                 reward = -100
 
         # Store data into agent's memory
-        agent.store_transition(np.mean(obs[15:200, 30:125], axis=2),
+        agent.store_transition(obs[15:200, 30:125],
                                     action,
                                     reward,
-                                    np.mean(obs_[15:200, 30:125], axis=2))
+                                    obs_[15:200, 30:125])
 
         obs = obs_
 
@@ -72,5 +74,30 @@ for i in range(num_games):
     # Save score
     score_history.append(score)
 
-plt.plot(score_history)
-plt.show()
+# plt.plot(score_history)
+# plt.show()
+
+# Test the model by simulating game play
+test_frames = []
+test_games = 10
+
+for i in range(test_games):
+    print("Test Game: ", i)
+    obs = env.reset()
+    done = False
+    agent.mem_counter = 0
+    test_score = 0
+    while not done:
+        if agent.mem_counter < 3:
+            action = np.random.choice(agent.action_space)
+        else:
+            action = agent.choose_action(test_frames) 
+            test_frames.pop(0)
+
+        env.render()
+        test_frames.append(obs[15:200, 30:125])
+        obs_, reward, done, info = env.step(action)
+        obs = obs_
+        test_score += reward
+        agent.mem_counter += 1
+    print("Score: ", score)
