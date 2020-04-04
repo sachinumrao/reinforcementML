@@ -1,9 +1,8 @@
 import gym
 import time
-# from DeepQModel import DeepQModel, Agent
-from DeepQLSTM import DeepQModel, Agent
+from DeepQLSTM import Agent
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 print("Starting the simulation...")
 env = gym.make("SpaceInvaders-v0")
@@ -14,13 +13,13 @@ seq_len = 10
 img_counts = batch_size + seq_len - 1
 
 agent = Agent(img_counts,
-            batch_size, 
-            seq_len,
-            gamma=0.99, 
-            eps=0.95,
-            alpha=0.002,
-            max_mem=5000,
-            replace=None)
+              batch_size,
+              seq_len,
+              gamma=0.99,
+              eps=0.95,
+              alpha=0.002,
+              max_mem=5000,
+              replace=None)
 
 print("Environment is built...")
 
@@ -51,30 +50,28 @@ for i in range(num_games):
             frames.pop(0)
 
         # For training for black and white images use below line
-        #frames.append(np.mean(obs[15:200, 30:125], axis=2))
+        # frames.append(np.mean(obs[15:200, 30:125], axis=2))
         frames.append(obs[15:200, 30:125])
-    
+
         obs_, reward, done, info = env.step(action)
         score += reward
 
         # Extra penalty for dying
         if done and info['ale.lives'] == 0:
-                reward = -100
+            reward = -100
 
         # Store data into agent's memory
-        agent.store_transition(obs[15:200, 30:125],
-                                    action,
-                                    reward,
-                                    obs_[15:200, 30:125])
+        agent.store_transition(obs[15:200, 30:125], action, reward,
+                               obs_[15:200, 30:125])
 
         obs = obs_
 
     t2 = time.time()
     print("Data Collection Process Completed...")
     print("Time Taken in Data Collection: ", t2-t1)
-    
+
     print("Game: ", i+1, " Game Length: ", agent.mem_counter)
-    
+
     # Make agent learn from stored data
     t3 = time.time()
     agent.learn()
@@ -98,7 +95,7 @@ for i in range(test_games):
     done = False
     agent.mem_counter = 0
     test_score = 0
-    
+
     while not done:
         if agent.mem_counter < seq_len:
             action = np.random.choice(agent.action_space)
@@ -116,4 +113,3 @@ for i in range(test_games):
     test_score_hist.append(test_score)
 
 print("Avg Test Score: ", sum(test_score_hist)/len(test_score_hist))
-
