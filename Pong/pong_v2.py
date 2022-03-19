@@ -51,6 +51,12 @@ def main():
     player_speed = 0
     opponent_speed = config.OPPONENT_SPEED
     
+    # text variables
+    player_score = 0
+    opponent_score = 0
+    
+    game_font = pg.font.Font("freesansbold.ttf", 16)
+    
     # event loop
     while True:
         for event in pg.event.get():
@@ -93,9 +99,15 @@ def main():
             
             
         # check collision of ball and paddle
-        if ball.colliderect(player) or ball.colliderect(opponent):
+        if ball.colliderect(player):
             ball_speed_x = ball_speed_x * (-1)
             ball_speed_y = ball_speed_y * random.choice((1, -1))
+            player_score += 1
+            
+        if ball.colliderect(opponent):
+            ball_speed_x = ball_speed_x * (-1)
+            ball_speed_y = ball_speed_y * random.choice((1, -1))
+            opponent_score += 1
             
         # move opponent
         if opponent.top < ball.y:
@@ -118,6 +130,13 @@ def main():
         pg.draw.rect(screen, config.PADDLE_COLOR, player)
         pg.draw.rect(screen, config.PADDLE_COLOR, opponent)
         pg.draw.ellipse(screen, config.BALL_COLOR, ball)
+        
+        # Add surface for score
+        player_text = game_font.render(f"{player_score:03d}", False, config.TEXT_COLOR)
+        screen.blit(player_text, config.PLAYER_SCORE_LOC)
+        
+        opponent_text = game_font.render(f"{opponent_score:03d}", False, config.TEXT_COLOR)
+        screen.blit(opponent_text, config.OPPONENT_SCORE_LOC)
         
         # Update window
         pg.display.flip()
