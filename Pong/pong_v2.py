@@ -1,5 +1,6 @@
 import random
 import sys
+import time
 
 import pygame as pg
 
@@ -37,6 +38,7 @@ def ball_animation():
 
 def main():
     # start pygame
+    pg.mixer.pre_init(44100, -16, 2, 512)
     pg.init()
     clock = pg.time.Clock()
 
@@ -61,6 +63,10 @@ def main():
     volley = 0
 
     game_font = pg.font.Font("freesansbold.ttf", 16)
+
+    # add sound assets
+    paddle_hit_sound = pg.mixer.Sound(config.PADDLE_SOUND)
+    score_sound = pg.mixer.Sound(config.SCORE_SOUND)
 
     # event loop
     while True:
@@ -105,6 +111,8 @@ def main():
 
             # reset the volley counter
             volley = 0
+            pg.mixer.Sound.play(score_sound)
+            time.sleep(2)
 
         if ball.right >= config.SCREEN_WIDTH:
             # if ball goes to the right side, give points to the player and reset the ball
@@ -113,17 +121,37 @@ def main():
 
             # reset the volley counter
             volley = 0
+            pg.mixer.Sound.play(score_sound)
+            time.sleep(2)
 
         # check collision of ball and paddle
-        if ball.colliderect(player):
-            ball_speed_x = ball_speed_x * (-1)
-            ball_speed_y = ball_speed_y * random.choice((1, -1))
-            volley += 1
+        if ball.colliderect(player) and ball_speed_x < 0:
+            if abs(ball.left - player.right) < 10:
+                ball_speed_x = ball_speed_x * (-1)
+                volley += 1
+                pg.mixer.Sound.play(paddle_hit_sound)
+            elif abs(ball.bottom - player.top) < 10 and ball_speed_y > 0:
+                ball_speed_y = ball_speed_y * (-1)
+                volley += 1
+                pg.mixer.Sound.play(paddle_hit_sound)
+            elif abs(ball.top - player.bottom) < 10 and ball_speed_y < 0:
+                ball_speed_y = ball_speed_y * (-1)
+                volley += 1
+                pg.mixer.Sound.play(paddle_hit_sound)
 
-        if ball.colliderect(opponent):
-            ball_speed_x = ball_speed_x * (-1)
-            ball_speed_y = ball_speed_y * random.choice((1, -1))
-            volley += 1
+        if ball.colliderect(opponent) and ball_speed_x > 0:
+            if abs(ball.right - opponent.left) < 10:
+                ball_speed_x = ball_speed_x * (-1)
+                volley += 1
+                pg.mixer.Sound.play(paddle_hit_sound)
+            elif abs(ball.bottom - opponent.top) < 10 and ball_speed_y > 0:
+                ball_speed_y = ball_speed_y * (-1)
+                volley += 1
+                pg.mixer.Sound.play(paddle_hit_sound)
+            elif abs(ball.top - player.bottom) < 10 and ball_speed_y < 0:
+                ball_speed_y = ball_speed_y * (-1)
+                volley += 1
+                pg.mixer.Sound.play(paddle_hit_sound)
 
         # move opponent
         if opponent.top < ball.y:
