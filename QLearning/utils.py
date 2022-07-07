@@ -1,34 +1,60 @@
 import random
-from collections import namedtuple
+from collections import deque, namedtuple
+from typing import Iterable, List, NamedTuple, Tuple
 
-import numpy as np
+import torch
+from torch.utils.data import DataLoader
 
 # define structure for buffer
-Buffer = namedtuple("Buffer", ["state", "next_state", "action", "reward", "done"])
+Experience = namedtuple(
+    "Experience", ["state", "action", "reward", "done", "next_state"]
+)
 
 
 class ReplayBuffer:
-    def __init__(self, buffer_size, seed=99):
-        # set seeds
-        random.seed(seed)
-        np.random.seed(seed)
-        self.data = None
-        self.curr_size = 0
-        self.max_buffer_size = buffer_size
+    """
+    Store agent's experiences from the environment
+    """
 
-    def add(self):
-        pass
+    def __init__(self, capacity: int) -> None:
+        self.capacity = capacity
+        self.data = deque([], maxlen=self.capacity)
 
-    def sample(self):
-        pass
+    def push(self, *args) -> None:
+        """
+        Add Experience to queue
+        """
+        self.data.append(Experience(*args))
 
-    def get_buffer_size(self):
-        return self.curr_size
-    
-    def reset(self):
-        self.data = None
-        self.curr_size = 0
-    
-    
+    def sample(self, sample_size: int) -> List[Experience]:
+        """
+        Get a sample of experience of batch_size
+        """
+        return random.sample(self.data, sample_size)
 
-    
+    def __len__(self) -> int:
+        """
+        Returns the current size of replay buffer
+        """
+        return len(self.data)
+
+    def reset(self) -> None:
+        """
+        Empty the replay buffer
+        """
+        self.data = deque([], maxlen=self.capacity)
+
+
+class GymDataLoader(DataLoader):
+    """
+    Convert replay buffer sample into torch dataloader
+    """
+
+    def __init__(self, buffer: ReplayBuffer, sample_size: int = 256) -> None:
+        self.buffer = buffer
+        self.sample_size = sample_size
+
+    def __iter__(self) -> Iterable[NamedTuple]:
+        sample = self.buffer.sample(self.sample_size)
+        for i in range(len(sample)):
+            yield sample[i]
