@@ -4,6 +4,7 @@ from collections import deque
 from typing import List
 
 import gym
+import matplotlib.pyplot as plt
 import numpy as np
 from tqdm.auto import tqdm
 
@@ -70,6 +71,8 @@ class SimpleReplayBuffer:
             self.data.append(exp)
 
     def sample(self, sample_size):
+        if sample_size > len(self.data):
+            sample_size = len(self.data)
         return random.sample(self.data, sample_size)
 
 
@@ -88,7 +91,7 @@ class Agent:
         # get state mappers
         states_high = self.env.observation_space.high
         states_low = self.env.observation_space.low
-        n_bins = [100] * len(states_high)
+        n_bins = [30] * len(states_high)
         self.mappers = []
 
         for high, low, bins in zip(states_high, states_low, n_bins):
@@ -102,10 +105,11 @@ class Agent:
         self.Q = np.random.uniform(
             low=-1.0, high=0.0, size=(self.n_states, self.n_actions)
         )
-        self.eps = 0.85
+        self.eps = 0.20
         self.gamma = 0.95
-        self.alpha = 0.01
-        self.n_episodes = 100
+        self.alpha = 0.9
+        self.n_episodes = 10000
+        self.reduction = self.eps / self.n_episodes
 
     def play(self, is_training=True, is_random=False):
         """
@@ -119,10 +123,17 @@ class Agent:
         cum_reward = 0.0
         steps = 0
         while not done:
-            state_bins = [self.mappers[idx].get_bin_id(obs_) for idx, obs_ in enumerate(obs)]
+            state_bins = [
+                self.mappers[idx].get_bin_id(obs_)
+                for idx, obs_ in enumerate(obs)
+            ]
             state_id = self.env_mapper.get_state(state_bins)
-            action = self.get_action(state_id, is_training, is_random=is_random)
+            action = self.get_action(
+                state_id, is_training, is_random=is_random
+            )
             new_obs, reward, done, info = self.env.step(action)
+            if reward != -1.0:
+                print(reward)
             experience.append((obs, action, reward, new_obs, done, info))
             cum_reward += reward
             steps += 1
@@ -134,17 +145,20 @@ class Agent:
         # return episode stats
         return {"steps": steps, "total_reward": cum_reward}
 
-    def get_action(self, state_id: int, is_training: bool, is_random=False) -> int:
+    def get_action(
+        self, state_id: int, is_training: bool, is_random=False
+    ) -> int:
         """
         This function select an action to take based on epsilon greedy policy
         """
 
         if is_random:
             action = self.env.action_space.sample()
+            return action
 
         prob = np.random.random()
 
-        if prob > self.eps and is_training:
+        if prob < self.eps and is_training:
             # select random action
             action = self.env.action_space.sample()
 
@@ -154,7 +168,6 @@ class Agent:
 
         return action
 
-
     def learn(self):
         """
         This function implements the bellman equation for updating the q-table
@@ -162,7 +175,7 @@ class Agent:
         """
 
         # get sample from experience
-        sample_size = 200
+        sample_size = 500
         samples = self.buffer.sample(sample_size)
 
         for exp_tup in samples:
@@ -171,15 +184,24 @@ class Agent:
             reward = exp_tup[2]
             action = exp_tup[1]
 
-            state_bins = [self.mappers[idx].get_bin_id(obs_) for idx, obs_ in enumerate(obs)]
+            state_bins = [
+                self.mappers[idx].get_bin_id(obs_)
+                for idx, obs_ in enumerate(obs)
+            ]
             state_id = self.env_mapper.get_state(state_bins)
 
-            new_state_bins = [self.mappers[idx].get_bin_id(obs_) for idx, obs_ in enumerate(new_obs)]
+            new_state_bins = [
+                self.mappers[idx].get_bin_id(obs_)
+                for idx, obs_ in enumerate(new_obs)
+            ]
             new_state_id = self.env_mapper.get_state(new_state_bins)
 
             # bellman optimality update on q-table
-            self.Q[state_id, action] = (1 - self.alpha) * self.Q[state_id, action] + self.alpha * (reward + self.gamma * np.max(self.Q[new_state_id, :]))
-
+            self.Q[state_id, action] = (1 - self.alpha) * self.Q[
+                state_id, action
+            ] + self.alpha * (
+                reward + self.gamma * np.max(self.Q[new_state_id, :])
+            )
 
     def test_policy(self, is_random=False):
         """
@@ -192,13 +214,12 @@ class Agent:
         cum_steps = 0
         cum_reward = 0.0
         for i in tqdm(range(test_episodes)):
-            run_stats = self.play(is_training=False, is_random=True)
-            cum_steps = run_stats["steps"]
-            cum_reward = run_stats["total_reward"]
+            run_stats = self.play(is_training=False)
+            cum_steps += run_stats["steps"]
+            cum_reward += run_stats["total_reward"]
 
-        print("Avg. Steps: ", cum_steps/test_episodes)
-        print("Avg. Reward: ", cum_reward/test_episodes)
-
+        print("Avg. Steps: ", cum_steps / test_episodes)
+        print("Avg. Reward: ", cum_reward / test_episodes)
 
     def train(self):
         """
@@ -206,13 +227,21 @@ class Agent:
         q-table
         """
 
+        steps = []
         print("Training the agent...")
         for i in tqdm(range(self.n_episodes)):
             # let agent play
             episode_stats = self.play()
+            steps.append(episode_stats["steps"])
+
+            if i % 10 == 0:
+                self.eps = self.eps - i * self.reduction
 
             # learn from experience
             self.learn()
+
+        plt.plot(steps)
+        plt.show()
 
 
 def test_env():
